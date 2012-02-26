@@ -65,8 +65,10 @@ this process a bit easier in the future.
 2 Create new directory for testing
 3 Go to testing directory
 4 > epicfail -g
-5 > mv test1.c.txt mytestcases.c
-6 Fill in the template with your own testcases
-7 > make
-8 > epicfail *.ef
+5 Use the skeleton.c as a template to make your own
+  testcase or testcases.
+6 Compile your testcases by running
+  > make
+7 Run tests
+  > epicfail *.ef
 
