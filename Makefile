@@ -1,23 +1,52 @@
-TARGET=target.mk
-LIBDIR=lib
-CLIDIR=cli
+EXE=epicfail
 
-set_target=\
-	echo "CC=$2" > $(TARGET);\
-	echo "EXE_FIX=$3" >> $(TARGET);\
-	echo "ODIR=obj-$@" >> $(TARGET);\
-	echo "Target is now $1"
+CC=cc
+LD=cc
+CFLAGS=-Wall -O2 -g
+LDFLAGS=-ldl
 
-.PHONY: all lin32 win32 clean
+ODIR=obj
+OTOUCH=obj/.d
 
-all:
+SRC=$(wildcard *.c)
+OBJ=$(SRC:%.c=$(ODIR)/%.o)
+DEP=$(OBJ:%.o=%.d)
 
-lin32:
-	@$(call set_target,Linux 32-bit,cc,)
+INSTALL_BIN=/usr/bin/$(EXE)
 
-win32:
-	@$(call set_target,Windows 32-bit,i586-mingw32msvc-cc,.exe)
+ZIP_FILE=epicfail.zip
+ZIP_CONTENT=$(wildcard *c) $(wildcard *.h) Makefile LICENSE README
+
+.PHONY: all doc zip install uninstall clean re
+
+all: $(EXE)
+
+$(EXE): $(OBJ)
+	$(LD) -o $@ $^ $(LDFLAGS)
+
+-include $(DEP)
+
+$(ODIR)/%.o: %.c $(OTOUCH)
+	$(CC) -o $@ -c $< -MMD -MF $(@:%.o=%.d) $(CFLAGS)
+
+$(OTOUCH):
+	mkdir -p $(ODIR)
+	touch $@
+
+zip: $(ZIP_FILE)
+
+$(ZIP_FILE): clean
+	rm -f $(ZIP_FILE)
+	zip $@ -r $(ZIP_CONTENT)
+
+install: $(LIBFILE)
+	cp -v $(EXE) $(INSTALL_BIN)
+
+uninstall:
+	rm -vr $(INSTALL_BIN)
 
 clean:
-	$(RM) $(TARGET)
+	$(RM) -r $(ODIR) $(EXE)
+
+re: clean all
 
