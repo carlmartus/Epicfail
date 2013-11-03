@@ -2,7 +2,7 @@
 #include "epicfail.h"
 
 static void
-print_complete(int code, const char *title)
+print_complete(int id, int code, const char *title)
 {
 	const char *stamp = "???";
 	switch (code) {
@@ -15,7 +15,7 @@ print_complete(int code, const char *title)
 		default :			stamp = "????";
 	}
 
-	printf(" [\x1B[1;%s\x1B[0m]\t%s\n", stamp, title);
+	printf(" %3d [\x1B[1;%s\x1B[0m]\t%s\n", id, stamp, title);
 }
 
 static void
@@ -63,7 +63,7 @@ callback(int report, int code, void *ptr)
 	switch (report) {
 		case EVENT_REPORT :
 			res = ptr;
-			print_complete(res->code, res->title);
+			print_complete(res->id, res->code, res->title);
 			break;
 
 		case EVENT_INFO :

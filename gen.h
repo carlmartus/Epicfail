@@ -5,16 +5,16 @@
 #define MAKE_CONTENT \
 "SRC=$(wildcard *.c)\n\n" \
 "CC=cc\n" \
+"CFLAGS=\n" \
 "LIBS=$(SRC:%.c=test_%.ef)\n" \
 "OBJS=# Add objectfiles to be included in testing.\n\n" \
 ".PHONY: all clean re\n\n" \
 "all: $(LIBS)\n\n" \
 "test_%.ef: %.c\n" \
 "	@echo \"Building $@ from $<\"\n" \
-"	@$(CC) -shared -fPIC -Wl,-soname,$@ -o $@ $< $(OBJS)\n\n" \
+"	@$(CC) $(CFLAGS) -shared -fPIC -Wl,-soname,$@ -o $@ $< $(OBJS)\n\n" \
 "clean:\n" \
 "	$(RM) $(LIBS)\n\n" \
-"re: clean all\n"
 
 #define C_FILE "skeleton.c"
 #define C_CONTENT \

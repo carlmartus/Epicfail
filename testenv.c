@@ -14,6 +14,11 @@ enum {
 	STEP_STOP,
 };
 
+enum test_type {
+	TEST_TYPE_ALL,
+	TEST_TYPE_LISTED,
+};
+
 static jmp_buf stack;
 static int last_signal, teststep;
 
@@ -26,7 +31,6 @@ test_case(testcase_t tc, int id)
 	int ret;
 	char msg[100];
 	result_t res;
-	res.id = id;
 
 	res.id = id;
 	res.title = tc.title;
@@ -69,24 +73,9 @@ test_case(testcase_t tc, int id)
 }
 
 static void
-run_tests()
+run_some_tests(const char *test_cmd)
 {
-	int id;
-	manifest_t *itr;
-	testcase_t tc;
-
-	id = 0;
-	itr = suite_lines;
-	while (itr->call) {
-		tc.title = itr->title;
-		tc.call = itr->call;
-		test_case(tc, id);
-
-		id++;
-		itr++;
-	}
 }
-
 
 static void
 write_file(const char *desc, const char *file, const char *content)
@@ -118,22 +107,35 @@ print_version()
 	printf("Epicfail Version %s\n", VERSION);
 }
 
-void
-runlibrary(const char *file_name)
+static enum test_type
+classify_test(const char *test_string)
 {
-	void *lib;
-	char msg[512];
+	return TEST_TYPE_ALL;
+	int semis = 0;
+	const char *itr = test_string;
 
-	sprintf(msg, "Running %s", file_name);
-	ef_trigger(EVENT_INFO, EF_TRIVIAL, msg);
+	while (1) {
+		switch (*itr) {
+			case '\0' : break;
+			case ':' : semis++; break;
+		}
+	}
 
+	if (semis > 0) return TEST_TYPE_LISTED;
+	return TEST_TYPE_ALL;
+}
+
+static void*
+open_test_lib(const char *file_name)
+{
 	// Open library
-	lib = dlopen(file_name, RTLD_LAZY);
+	char msg[512];
+	void *lib = dlopen(file_name, RTLD_LAZY);
 	if (lib == NULL) {
 		sprintf(msg, "Cannot open library %s", file_name);
 		ef_trigger(EVENT_INFO, EF_ERROR, msg);
 		fprintf(stderr, "%s\n", dlerror());
-		return;
+		return NULL;
 	}
 
 	suite_start = dlsym(lib, "start");
@@ -142,15 +144,62 @@ runlibrary(const char *file_name)
 
 	if (suite_lines == NULL) {
 		ef_trigger(EVENT_INFO, EF_ERROR, "Cannot get symbols from library");
-		return;
+		return NULL;
 	}
 
 	sprintf(msg, "Test %s", file_name);
 	ef_trigger(EVENT_INFO, EF_STEP, msg);
-	run_tests();
 
-	// Close library
-	dlclose(lib);
+	return lib;
+}
+
+static int
+close_test_lib(void *lib)
+{
+	return dlclose(lib);
+}
+
+static void
+run_all_tests(const char *file_name)
+{
+	void *lib = open_test_lib(file_name);
+	if (lib == NULL) return;
+
+	int id;
+	manifest_t *itr;
+	testcase_t tc;
+
+	id = 0;
+	itr = suite_lines;
+	while (itr->call) {
+		tc.title = itr->title;
+		tc.call = itr->call;
+		test_case(tc, id);
+
+		id++;
+		itr++;
+	}
+
+	close_test_lib(lib);
+}
+
+void
+runlibrary(const char *test_case)
+{
+	char msg[512];
+
+	sprintf(msg, "Running %s", test_case);
+	ef_trigger(EVENT_INFO, EF_TRIVIAL, msg);
+
+	switch (classify_test(test_case)) {
+		case TEST_TYPE_ALL :
+			run_all_tests(test_case);
+			break;
+
+		case TEST_TYPE_LISTED :
+			run_some_tests(test_case);
+			break;
+	}
 }
 
 void
