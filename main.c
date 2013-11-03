@@ -15,7 +15,7 @@ print_complete(int id, int code, const char *title)
 		default :			stamp = "????";
 	}
 
-	printf(" %3d [\x1B[1;%s\x1B[0m]\t%s\n", id, stamp, title);
+	printf(" #%-3d [\x1B[1;%s\x1B[0m]\t%s\n", id, stamp, title);
 }
 
 static void

@@ -25,6 +25,7 @@ static int last_signal, teststep;
 static test_ception_t suite_start, suite_stop;
 static manifest_t *suite_lines;
 
+// Run test case {{{
 static void
 test_case(testcase_t tc, int id)
 {
@@ -72,59 +73,8 @@ test_case(testcase_t tc, int id)
 	ef_trigger(EVENT_REPORT, res.code, &res);
 }
 
-static void
-run_some_tests(const char *test_cmd)
-{
-}
-
-static void
-write_file(const char *desc, const char *file, const char *content)
-{
-	int size;
-	FILE *fd;
-	char msg[80];
-
-	sprintf(msg, "Generating %s %s", desc, file);
-	ef_trigger(EVENT_INFO, EF_GENERATE, msg);
-
-	fd = fopen(file, "w");
-	size = strlen(content);
-	fwrite(content, size, 1, fd);
-	fclose(fd);
-}
-
-void
-generate_make()
-{
-	write_file("Makefile", MAKE_FILE, MAKE_CONTENT);
-	write_file("Sample source", C_FILE, C_CONTENT);
-	write_file("Header", H_FILE, H_CONTENT);
-}
-
-void
-print_version()
-{
-	printf("Epicfail Version %s\n", VERSION);
-}
-
-static enum test_type
-classify_test(const char *test_string)
-{
-	return TEST_TYPE_ALL;
-	int semis = 0;
-	const char *itr = test_string;
-
-	while (1) {
-		switch (*itr) {
-			case '\0' : break;
-			case ':' : semis++; break;
-		}
-	}
-
-	if (semis > 0) return TEST_TYPE_LISTED;
-	return TEST_TYPE_ALL;
-}
-
+// }}}
+// Open and close library {{{
 static void*
 open_test_lib(const char *file_name)
 {
@@ -159,6 +109,43 @@ close_test_lib(void *lib)
 	return dlclose(lib);
 }
 
+// }}}
+// Run file {{{
+static void
+run_some_tests(const char *test_cmd)
+{
+	char file_name[512];
+	const char *itr = test_cmd;
+
+	int i = 0;
+	while (*itr != ':') {
+		file_name[i++] = *itr++;
+	}
+	file_name[i] = '\0';
+	itr++;
+
+	void *lib = open_test_lib(file_name);
+
+	int run = 1;
+	while (run && *itr != '\0') {
+		int num = atoi(itr);
+
+		testcase_t tc;
+		tc.title = suite_lines[num].title;
+		tc.call = suite_lines[num].call;
+		test_case(tc, num);
+
+		while (*itr >= '0' && *itr <= '9') {
+			itr++;
+		}
+
+		if (*itr == '\0') run = 0;
+		itr++;
+	}
+
+	close_test_lib(lib);
+}
+
 static void
 run_all_tests(const char *file_name)
 {
@@ -183,6 +170,57 @@ run_all_tests(const char *file_name)
 	close_test_lib(lib);
 }
 
+// }}}
+// Template {{{
+static void
+write_file(const char *desc, const char *file, const char *content)
+{
+	int size;
+	FILE *fd;
+	char msg[80];
+
+	sprintf(msg, "Generating %s %s", desc, file);
+	ef_trigger(EVENT_INFO, EF_GENERATE, msg);
+
+	fd = fopen(file, "w");
+	size = strlen(content);
+	fwrite(content, size, 1, fd);
+	fclose(fd);
+}
+
+void
+generate_make()
+{
+	write_file("Makefile", MAKE_FILE, MAKE_CONTENT);
+	write_file("Sample source", C_FILE, C_CONTENT);
+	write_file("Header", H_FILE, H_CONTENT);
+}
+
+// }}}
+// Testenv {{{
+void
+print_version()
+{
+	printf("Epicfail Version %s\n", VERSION);
+}
+
+// }}}
+// Execute {{{
+static enum test_type
+classify_test(const char *test_string)
+{
+	int semis = 0;
+	const char *itr = test_string;
+
+	while (*itr != '\0') {
+		if (*itr == ':') semis++;
+		itr++;
+	}
+
+	if (semis > 0) return TEST_TYPE_LISTED;
+	return TEST_TYPE_ALL;
+}
+
 void
 runlibrary(const char *test_case)
 {
@@ -202,6 +240,8 @@ runlibrary(const char *test_case)
 	}
 }
 
+// }}}
+// Signal handeling {{{
 void
 sighandle(int sig)
 {
@@ -218,4 +258,6 @@ sighandle(int sig)
 
 	longjmp(stack, 1);
 }
+
+// }}}
 
