@@ -54,3 +54,11 @@ Now as root:
 7 Run tests
   > epicfail *.ef
 
+ 4. Running some tests
+It's possible since 1.1 to run only specified tests
+rather than all tests in a program. This is done by
+specifying the ID of the test as a parameter like this:
+  > epicfail test_sometest.ef:1,2,3,2
+This will iterate through the tests 1, 2, 3 and then 2
+again.
+
